@@ -1,5 +1,12 @@
 import { useState } from 'react';
+import NavBar from "./components/NavBar"
+// import SideBar from "./components/Sidebar"
+// import Footer from "./components/Footer"
 
 export default function App() {
-  const [posts, setPosts] = useState(Array(0))
+  
+  return (
+    <NavBar />
+
+  );
 }
