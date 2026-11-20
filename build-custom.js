@@ -1,65 +1,105 @@
 /* TODO:
-the algorithm should go like this:
-- call the function with the input path for the directory
-- goes through every file in the directory and turn it into the object format and add it to an array
-- if the file is a directory then go into that directory and do the same
-- if the file is a file then move on
-- when all files and directories are in the array, serialize it as a json file through stringify
+change necessary fnctions to use async properly
 */
 
 // this custom file might be used as a node.js script to read all file names for the build
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 
-function serialiseJSON(outputPath, inputArray) {
+let allFileObject = [];
 
-  // outputs the array of file paths with:
-  //  - unique id field (counter?)
-  //  - full relative path
-  //  - name for display on a react button component
-  //  - sub files (if the file path is a directory)
+function serialiseJSON(outputPath, inputArray) {
+  // serialise the objects into json
+
 }
 
-function recursiveSerialiseFilesInDirectory(inputPath) {
+function checkMarkdown(inputPath) {
+  if(path.extname(inputPath) == ".md") {
+    return true
+  } else {
+    return false
+  }
+}
+
+function checkDirectory(inputPath) {
+  fs.stat(inputPath, (err, stats) => {
+    if(err) {
+      console.log("Error checking path for directory: " + err);
+      return;
+    }
+    return stats.isDirectory();
+  });
+}
+
+function calculateName(inputPath) {
+  // This funciton calculates a displayable name based on the filename. This is done because the
+  // format of files should be manually set to "an-example.md".
+  // In the presented case, this function returns "an example" as a string.
+  // TODO: Return with capital letters instead.
+  let base = path.basename(inputPath);
+  let baseArray = base.split();
+
+  let i;
+  let ch = '';
+  let returnString = "";
+  for(i in baseArray) {
+    ch = baseArray[i];
+    switch(ch) {
+      case '.':
+        return returnString;
+      case '-':
+        returnString.concat(" ");
+      default:
+        returnString.concat(ch);
+    }
+  }
+  return "CalculateName Error!";
+}
+
+class ItemNode {
+  constructor(fullRelativePath, name, subfiles) {
+    this.id = staticCounter;
+    this.fullRelativePath = fullRelativePath;
+    this.name = name;
+    this.isDirectory = checkDirectory(fullRelativePath);
+    this.subfiles = subfiles;
+    staticCounter++;
+  }
+  static staticCounter = 0;
+} 
+
+async function recursiveSerialiseFilesInDirectory(inputPath) {
   // this function should go through all directories and add the file paths to an
   // array that can be serialised into a json file. 
-  let filesArray = [];
-  let counter = 0;
-  
+
+  let objectArray = [];
   fs.readdir(inputPath, (err, files) => {
     if(err) {
       return console.log("Unable to scan directory: " + err);
     }
     files.forEach(file => {
-      if(fs.stat(file, (err, stats) => {
-        if(err) {
-          console.log("Unable to stat " + file + ": " + err);
-        } else {
-          if(stats.isDirectory()) {
-
-            recursiveSerialiseFilesInDirectory(file);
-          }
-          // both markdown and directories are pushed to the array
-          filesArray.push(file);
-        }
-      }));
+      let fullPath = path.join(inputPath, file);
+      if(!checkDirectory(fullPath) && !checkMarkdown(fullPath)) {
+        continue;
+      } else if(checkDirectory(fullPath)) {     
+        objectArray.push(new ItemNode(fullPath, calculateName(fullPath), 
+          recursiveSerialiseFilesInDirectory(fullPath)));
+      } else if(checkMarkdown(fullPath)) {
+        objectArray.push(new ItemNode(fullPath, calculateName(fullPath), null))
+      } else {
+        console.error("File type has eluded: " + fullPath);
+      }
     });
+    return objectArray;
   }); 
 
 }
 
-function buildBlogJSON() {
-  let allFiles = [];
-  fs.readdir('./public/posts/', (err, files) => {
-    if(err) {
-      return console.log("Unable to scan directory: " + err);
-    }
-    files.foreach(file => allFiles.push(file));
-  })
-}
+// gets the dirname of this .js script file
+const __dirname = import.meta.dirname;
 
-function buildProjectsJSON() {
-  fs.readdir('./public/projects/', (err, files) => {
-    if()
-  })
-}
+// Build the Blog JSON
+recursiveSerialiseFilesInDirectory(path.join(__dirname, "public/posts"));
+
+// Build the Projects JSON
+recursiveSerialiseFilesInDirectory(path.join(__dirname, "public/projects"));
