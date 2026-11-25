@@ -1,10 +1,8 @@
 // this custom file might be used as a node.js script to read all file names for the build
-// TODO: fix calculateName and the paths/relative path problem
+// TODO: fix calculateName capitals
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
-
-const pathToPublic = "/home/ojab/dev/personal/oliver-myers-website/public";
 
 function serialiseJSON(inputArray, outputPath) {
   // serialise the objects into json
@@ -34,30 +32,24 @@ function calculateName(inputPath) {
   // format of files should be manually set to "an-example.md".
   // In the presented case, this function returns "an example" as a string.
   // TODO: Return with capital letters instead.
-  let base = path.basename(inputPath);
-  let baseArray = base.split();
-
-  let i;
-  let ch = '';
+  let base = path.basename(inputPath, '.md');
   let returnString = "";
-  for(i in baseArray) {
-    ch = baseArray[i];
+  for(const ch of base) {
     switch(ch) {
-      case '.':
-        return returnString;
       case '-':
-        returnString.concat(" ");
+        returnString += " ";
+        break;
       default:
-        returnString.concat(ch);
+        returnString += ch;
     }
   }
-  return "CalculateName Error!";
+  return returnString;
 }
 
 class ItemNode {
-  constructor(fullRelativePath, name, subfiles, isDirectory) {
+  constructor(fullPath, name, subfiles, isDirectory) {
     this.id = ItemNode.staticCounter;
-    this.fullRelativePath = fullRelativePath;
+    this.relativePath = ("/" + path.relative(pathToPublic, fullPath));
     this.name = name;
     this.isDirectory = isDirectory;
     this.subfiles = subfiles;
@@ -84,17 +76,19 @@ async function recurseGetFilesInDirec(inputPath) {
         objectArray.push(new ItemNode(fullPath, calculateName(fullPath), null, 
           isDirec));
       } else {
-        throw new Error("File type has eluded: " + fullPath);
+        console.log("File type has eluded: " + fullPath);
       }
     }
-    return objectArray;
   } catch (e) {
     console.log(e);
   } 
+  return objectArray;
 }
 
 // gets the dirname of this .js script file
 const __dirname = import.meta.dirname;
+
+const pathToPublic = path.join(__dirname, "public/");
 
 // Build the Blog JSON
 let postsArray = await recurseGetFilesInDirec(path.join(__dirname, "public/posts"));
