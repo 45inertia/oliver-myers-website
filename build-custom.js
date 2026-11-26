@@ -4,8 +4,15 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-function serialiseJSON(inputArray, outputPath) {
+async function serialiseJSON(inputArray, filename, outPath) {
   // serialise the objects into json
+  try {
+    let outString = JSON.stringify(inputArray, null, 2);
+    await fs.writeFile(outPath + filename, outString);
+    console.log("Written: " + outPath + filename);
+  } catch (e) {
+    console.error(e);
+  }
 
 }
 
@@ -85,13 +92,23 @@ async function recurseGetFilesInDirec(inputPath) {
   return objectArray;
 }
 
+export default async function runScript() {
 // gets the dirname of this .js script file
 const __dirname = import.meta.dirname;
 
 const pathToPublic = path.join(__dirname, "public/");
+
+const treeOutPath = path.join(__dirname, "src/trees/");
+const createTreeDir = await fs.mkdir(treeOutPath, {recursive: true});
+console.log("Creating Tree Directory: " + createTreeDir);
 
 // Build the Blog JSON
 let postsArray = await recurseGetFilesInDirec(path.join(__dirname, "public/posts"));
 
 // Build the Projects JSON
 let projectsArray = await recurseGetFilesInDirec(path.join(__dirname, "public/projects"));
+
+await serialiseJSON(postsArray, "posts.json", treeOutPath);
+
+await serialiseJSON(projectsArray, "projects.json", treeOutPath);
+}
